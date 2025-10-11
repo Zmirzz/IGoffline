@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>IGoffline Direct – Usage Guide</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    :root {
+      color-scheme: dark light;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 960px;
+      padding: 48px 24px 64px;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.65;
+      background: radial-gradient(circle at top left, rgba(77, 77, 110, 0.15), transparent 60%), #101018;
+      color: #f9fafb;
+    }
+    h1, h2, h3 {
+      color: #ffffff;
+      line-height: 1.2;
+    }
+    p, li {
+      color: #d1d5db;
+    }
+    a {
+      color: #4ea8ff;
+      text-decoration: none;
+    }
+    a:hover {
+      text-decoration: underline;
+    }
+    code {
+      background: rgba(255, 255, 255, 0.08);
+      padding: 2px 6px;
+      border-radius: 6px;
+      font-size: 0.92em;
+    }
+    pre {
+      background: rgba(15, 23, 42, 0.6);
+      padding: 16px 20px;
+      border-radius: 12px;
+      overflow-x: auto;
+    }
+    ul, ol {
+      padding-left: 24px;
+    }
+    strong {
+      color: #ffffff;
+    }
+  </style>
+</head>
+<body>
+  <h1>IGoffline Direct</h1>
+  <p>
+    IGoffline Direct is a pure frontend Instagram Direct archive viewer. It recreates the familiar DM interface for your exported data so you can revisit conversations without logging into Instagram. All processing happens client-side – no analytics, servers, or uploads.
+  </p>
+
+  <h2>Key Features</h2>
+  <ul>
+    <li><strong>Inbox-style layout</strong> with avatars, previews, and relative timestamps.</li>
+    <li><strong>Drag &amp; drop imports</strong> for entire <code>messages</code> folders or individual <code>message_X.json</code> files.</li>
+    <li><strong>Identity selection</strong> so the app knows which side of the chat to style as “you”.</li>
+    <li><strong>Message detail rendering</strong> covering text, links, reactions, calls, story shares, and attachment summaries.</li>
+    <li><strong>Conversation filtering</strong> via a quick search box on the sidebar.</li>
+    <li><strong>Merged JSON export</strong> to save the normalised dataset for reuse elsewhere.</li>
+  </ul>
+
+  <h2>How to Use</h2>
+  <ol>
+    <li>Request your Instagram data download, unzip it, and locate the <code>messages/inbox</code> directory.</li>
+    <li>Open <code>index.html</code> in a modern desktop browser (Chrome, Edge, Firefox, Safari&nbsp;15+).</li>
+    <li>Drag the <code>messages</code> folder—or any selection of <code>message_X.json</code> files—onto the window, or click <strong>Import archive</strong> and pick them manually.</li>
+    <li>Choose your own account name from the identity picker so outgoing messages receive the right-hand bubble styling.</li>
+    <li>Pick a conversation in the sidebar to browse the full thread. Use the search bar above to filter by participant or title.</li>
+    <li>Hit <strong>Export merged JSON</strong> anytime you want to download the combined, normalised conversations.</li>
+  </ol>
+  <p><em>Tip:</em> Large archives import faster in batches. You can drag more files in later—the viewer merges them into existing threads automatically.</p>
+
+  <h2>Project Layout</h2>
+  <pre><code>.
+├── index.html      # Interface shell
+├── styles.css      # Instagram Direct-inspired styling
+└── src
+    └── app.js      # Import, parsing, rendering, and export logic
+</code></pre>
+
+  <h2>Data Notes</h2>
+  <ul>
+    <li>Each <code>message_X.json</code> file is grouped by its <code>thread_path</code>, matching Instagram’s folder layout.</li>
+    <li>Media (photos, videos, audio, files) are not auto-loaded, but their presence is listed along with the export-relative URIs so you can open them manually.</li>
+    <li>The export function preserves the parsed data plus the original raw message fields, ready for further scripting.</li>
+  </ul>
+
+  <h2>Extending the Viewer</h2>
+  <ul>
+    <li>To load zipped exports directly, bundle a client-side decompression library (e.g. <code>fflate</code>, <code>JSZip</code>) and feed the extracted JSON into the existing import pipeline.</li>
+    <li>For inline media previews, use the stored <code>uri</code> paths to fetch the corresponding files (placing them next to the app or leveraging the File System Access API).</li>
+  </ul>
+
+  <h2>Browser Support</h2>
+  <p>
+    Tested on the latest Chrome/Edge, Firefox, and Safari 15+. Mobile browsers may limit folder drops or large file parsing.
+  </p>
+
+  <h2>License</h2>
+  <p>
+    Provided as-is with no explicit license. Feel free to adapt it for your personal archive workflow.
+  </p>
+</body>
+</html>

@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IGoffline Archive Browser</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="brand">
+          <span class="brand-badge">IG</span>
+          <div class="brand-info">
+            <span class="brand-name">Offline Direct</span>
+            <span class="brand-sub">Browse archived chats</span>
+          </div>
+        </div>
+        <label class="import-button">
+          <input type="file" id="fileInput" multiple webkitdirectory>
+          Import archive
+        </label>
+        <p class="import-hint">Drop Instagram JSON files or the <code>messages</code> folder anywhere.</p>
+        <div class="identity-picker">
+          <label for="identitySelect">You are</label>
+          <select id="identitySelect" disabled>
+            <option value="" selected hidden>Select after import</option>
+          </select>
+        </div>
+        <div class="thread-search">
+          <input type="search" id="threadSearchInput" placeholder="Search conversations" disabled>
+        </div>
+      </div>
+      <div class="thread-list" id="threadList" aria-label="Conversation list">
+        <div class="empty-state">Import your archive to see conversations.</div>
+      </div>
+    </aside>
+
+    <section class="conversation-panel">
+      <header class="conversation-header" id="conversationHeader">
+        <div class="conversation-meta">
+          <div class="avatar" id="conversationAvatar" aria-hidden="true"></div>
+          <div>
+            <h2 id="conversationTitle">No conversation selected</h2>
+            <p id="conversationParticipants"></p>
+          </div>
+        </div>
+        <div class="conversation-actions">
+          <button id="exportButton" class="ghost-button" disabled>Export merged JSON</button>
+          <button id="clearButton" class="ghost-button" disabled>Clear</button>
+        </div>
+      </header>
+
+      <div class="message-list" id="messageList" aria-live="polite">
+        <div class="empty-state">Pick a conversation to view its messages.</div>
+      </div>
+
+      <footer class="conversation-footer">
+        <p>
+          Messages never leave your browser. <a href="README.html" target="_blank" rel="noopener">Usage guide</a>
+        </p>
+      </footer>
+    </section>
+  </div>
+
+  <div class="drop-overlay" id="dropOverlay">Drop files to import</div>
+
+  <script type="module" src="src/app.js"></script>
+</body>
+</html>
