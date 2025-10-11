@@ -106,12 +106,12 @@ function mergeConversationSegment(conversationMap, data, sourcePath) {
   }
 
   if (data.title && (!conversation.title || conversation.title === conversation.threadPath)) {
-    conversation.title = data.title;
+    conversation.title = repairText(data.title);
   }
 
   if (Array.isArray(data.participants)) {
     data.participants.forEach((participant) => {
-      const name = participant?.name || participant;
+      const name = repairText(participant?.name || participant);
       if (typeof name === 'string' && !conversation.participantSet.has(name)) {
         conversation.participantSet.add(name);
         conversation.participants.push(name);
@@ -148,10 +148,10 @@ function normalizeMessage(message) {
 
   return {
     id: `${timestampMs || Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-    sender: message?.sender_name || 'Unknown',
+    sender: repairText(message?.sender_name || 'Unknown'),
     timestampMs,
     timestamp: timestampMs ? new Date(timestampMs).toISOString() : null,
-    text: typeof message?.content === 'string' ? message.content : null,
+    text: typeof message?.content === 'string' ? repairText(message.content) : null,
     share: normalizeShare(message?.share),
     storyShare: normalizeStoryShare(message?.story_share),
     media: normalizeMedia(message),
@@ -160,7 +160,8 @@ function normalizeMessage(message) {
     files: normalizeFiles(message?.files),
     isUnsent: Boolean(message?.is_unsent),
     isAction: type.includes('generic_admin') || type.includes('genericadmin'),
-    actionText: typeof message?.content === 'string' && type.includes('generic') ? message.content : null,
+    actionText:
+      typeof message?.content === 'string' && type.includes('generic') ? repairText(message.content) : null,
     raw: message,
   };
 }
@@ -170,8 +171,8 @@ function normalizeShare(share) {
     return null;
   }
   return {
-    link: share.link || null,
-    text: share.text || null,
+    link: repairText(share.link || null),
+    text: repairText(share.text || null),
   };
 }
 
@@ -180,8 +181,8 @@ function normalizeStoryShare(story) {
     return null;
   }
   return {
-    title: story.title || 'Shared a story',
-    url: story.link || null,
+    title: repairText(story.title || 'Shared a story'),
+    url: repairText(story.link || null),
     media: story.media || null,
   };
 }
@@ -212,7 +213,7 @@ function normalizeFiles(files) {
   }
   return files.map((file, index) => ({
     uri: file?.uri || null,
-    title: file?.title || file?.name || `File ${index + 1}`,
+    title: repairText(file?.title || file?.name || `File ${index + 1}`),
   }));
 }
 
@@ -222,7 +223,7 @@ function normalizeReactions(reactions) {
   }
   return reactions.map((reaction) => ({
     emoji: reaction?.reaction || reaction?.emoji || '❤️',
-    actor: reaction?.actor || 'Unknown',
+    actor: repairText(reaction?.actor || 'Unknown'),
   }));
 }
 
@@ -232,7 +233,7 @@ function normalizeCall(message) {
     return null;
   }
   return {
-    description: call?.label || call?.description || 'Call',
+    description: repairText(call?.label || call?.description || 'Call'),
     duration: call?.duration || call?.duration_seconds || null,
     missed: Boolean(call?.missed),
   };
@@ -344,6 +345,7 @@ function populateIdentitySelect() {
   placeholder.textContent = options.length ? 'Pick your account' : 'Select after import';
   placeholder.disabled = true;
   placeholder.selected = !state.identity;
+  placeholder.hidden = true;
   select.append(placeholder);
 
   options.forEach((entry) => {
@@ -839,6 +841,40 @@ function initials(name) {
     return parts[0].slice(0, 2).toUpperCase();
   }
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+function repairText(value) {
+  if (typeof value !== 'string' || value.length === 0) {
+    return value;
+  }
+  if (typeof TextDecoder === 'undefined') {
+    return value;
+  }
+  const buffer = new Uint8Array(value.length);
+  let requiresDecode = false;
+  for (let i = 0; i < value.length; i++) {
+    const code = value.charCodeAt(i);
+    if (code > 255) {
+      return value;
+    }
+    buffer[i] = code;
+    if (code >= 0xc2) {
+      requiresDecode = true;
+    }
+  }
+  if (!requiresDecode) {
+    return value;
+  }
+  try {
+    const decoded = new TextDecoder('utf-8', { fatal: false }).decode(buffer);
+    if (!decoded || decoded.includes('\uFFFD')) {
+      return value;
+    }
+    return decoded;
+  } catch (error) {
+    console.warn('Failed to repair text encoding', error);
+    return value;
+  }
 }
 
 function sanitize(value) {
