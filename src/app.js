@@ -3,6 +3,8 @@ const state = {
   selectedConversationId: null,
   identity: '',
   searchTerm: '',
+  messageSearchTerm: '',
+  focusMessageId: null,
   participantStats: new Map(),
 };
 
@@ -18,6 +20,7 @@ const elements = {
   exportButton: document.getElementById('exportButton'),
   clearButton: document.getElementById('clearButton'),
   dropOverlay: document.getElementById('dropOverlay'),
+  messageSearchInput: document.getElementById('messageSearchInput'),
 };
 
 const DATE_FORMAT = new Intl.DateTimeFormat(undefined, {
@@ -37,6 +40,7 @@ function init() {
   elements.fileInput.addEventListener('change', handleFileInput);
   elements.identitySelect.addEventListener('change', handleIdentityChange);
   elements.threadSearchInput.addEventListener('input', handleThreadSearch);
+  elements.messageSearchInput.addEventListener('input', handleMessageSearch);
   elements.exportButton.addEventListener('click', downloadArchive);
   elements.clearButton.addEventListener('click', clearArchive);
 
@@ -381,6 +385,15 @@ function handleThreadSearch(event) {
   updateThreadList();
 }
 
+function handleMessageSearch(event) {
+  state.messageSearchTerm = event.target.value;
+  state.focusMessageId = null;
+  const conversation = state.conversations.find((entry) => entry.id === state.selectedConversationId);
+  if (conversation) {
+    renderMessages(conversation);
+  }
+}
+
 function updateThreadList() {
   const list = elements.threadList;
   list.innerHTML = '';
@@ -453,11 +466,25 @@ function selectConversation(conversationId) {
   if (!conversation && state.conversations.length) {
     return selectConversation(state.conversations[0].id);
   }
-  state.selectedConversationId = conversation ? conversation.id : null;
+  const nextId = conversation ? conversation.id : null;
+  const changed = state.selectedConversationId !== nextId;
+  state.selectedConversationId = nextId;
+  if (changed) {
+    state.messageSearchTerm = '';
+    state.focusMessageId = null;
+    elements.messageSearchInput.value = '';
+  }
   renderConversation(conversation);
 }
 
 function renderConversation(conversation) {
+  if (!conversation) {
+    elements.messageSearchInput.value = '';
+  } else {
+    elements.messageSearchInput.value = state.messageSearchTerm;
+  }
+  elements.messageSearchInput.disabled = !conversation;
+  elements.messageSearchInput.placeholder = conversation ? 'Search messages' : 'Select a conversation to search';
   if (!conversation) {
     elements.conversationTitle.textContent = 'No conversation selected';
     elements.conversationParticipants.textContent = '';
@@ -483,10 +510,22 @@ function renderMessages(conversation) {
     return;
   }
 
+  const rawSearch = state.messageSearchTerm;
+  const searchTerm = rawSearch.trim().toLowerCase();
+  const hasSearchTerm = Boolean(searchTerm);
+  const messagesToRender = hasSearchTerm
+    ? conversation.messages.filter((message) => messageMatchesSearch(message, searchTerm))
+    : conversation.messages;
+
+  if (!messagesToRender.length) {
+    container.innerHTML = '<div class="empty-state">No messages match your search.</div>';
+    return;
+  }
+
   let lastDateKey = '';
   const fragment = document.createDocumentFragment();
 
-  conversation.messages.forEach((message) => {
+  messagesToRender.forEach((message) => {
     const date = message.timestampMs ? new Date(message.timestampMs) : null;
     const dateKey = date ? date.toDateString() : '';
     if (dateKey && dateKey !== lastDateKey) {
@@ -498,19 +537,43 @@ function renderMessages(conversation) {
     }
 
     if (message.isAction) {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'message-group action-wrapper';
+      wrapper.dataset.messageId = message.id;
+
       const action = document.createElement('div');
       action.className = 'date-divider action-message';
       action.textContent = message.actionText || `${message.sender} updated the chat`;
-      fragment.append(action);
+      wrapper.append(action);
+
+      if (hasSearchTerm) {
+        const actionControls = document.createElement('div');
+        actionControls.className = 'message-meta action-controls';
+
+        const jumpButton = createJumpButton(() => jumpToMessage(conversation, message.id));
+        actionControls.append(jumpButton);
+        wrapper.append(actionControls);
+      }
+
+      fragment.append(wrapper);
       return;
     }
 
     const group = document.createElement('div');
     group.className = 'message-group';
+    group.dataset.messageId = message.id;
 
     const meta = document.createElement('div');
     meta.className = 'message-meta';
-    meta.textContent = `${message.sender}${date ? ` • ${TIME_FORMAT.format(date)}` : ''}`;
+    const metaText = document.createElement('span');
+    metaText.className = 'message-meta-text';
+    metaText.textContent = `${message.sender}${date ? ` • ${TIME_FORMAT.format(date)}` : ''}`;
+    meta.append(metaText);
+
+    if (hasSearchTerm) {
+      meta.append(createJumpButton(() => jumpToMessage(conversation, message.id)));
+    }
+
     group.append(meta);
 
     const bubble = document.createElement('div');
@@ -609,7 +672,38 @@ function renderMessages(conversation) {
   });
 
   container.append(fragment);
-  container.scrollTop = container.scrollHeight;
+
+  if (state.focusMessageId) {
+    const target = container.querySelector(`[data-message-id="${state.focusMessageId}"]`);
+    if (target) {
+      target.classList.add('message-focus');
+      target.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      setTimeout(() => target.classList.remove('message-focus'), 2000);
+    }
+    state.focusMessageId = null;
+  } else if (hasSearchTerm) {
+    container.scrollTop = 0;
+  } else {
+    container.scrollTop = container.scrollHeight;
+  }
+}
+
+function createJumpButton(handler) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'jump-button';
+  button.textContent = 'Show in chat';
+  button.addEventListener('click', handler);
+  return button;
+}
+
+function jumpToMessage(conversation, messageId) {
+  state.focusMessageId = messageId;
+  if (state.messageSearchTerm) {
+    state.messageSearchTerm = '';
+    elements.messageSearchInput.value = '';
+  }
+  renderConversation(conversation);
 }
 
 function updateControls() {
@@ -618,6 +712,10 @@ function updateControls() {
   elements.exportButton.disabled = !hasData;
   elements.threadSearchInput.disabled = !hasData;
   elements.threadSearchInput.placeholder = hasData ? 'Search conversations' : 'Import conversations first';
+  elements.messageSearchInput.disabled = !state.selectedConversationId;
+  elements.messageSearchInput.placeholder = state.selectedConversationId
+    ? 'Search messages'
+    : 'Select a conversation to search';
 }
 
 function clearArchive() {
@@ -625,9 +723,12 @@ function clearArchive() {
   state.selectedConversationId = null;
   state.identity = '';
   state.searchTerm = '';
+  state.messageSearchTerm = '';
+  state.focusMessageId = null;
   state.participantStats = new Map();
 
   elements.threadSearchInput.value = '';
+  elements.messageSearchInput.value = '';
   elements.identitySelect.innerHTML = '<option value="" selected disabled>Select after import</option>';
   elements.identitySelect.disabled = true;
 
@@ -816,6 +917,51 @@ function formatRelativeTime(timestampMs) {
     return new Intl.DateTimeFormat(undefined, { weekday: 'short' }).format(new Date(timestampMs));
   }
   return DATE_FORMAT.format(new Date(timestampMs));
+}
+
+function messageMatchesSearch(message, searchTerm) {
+  if (!searchTerm) {
+    return true;
+  }
+
+  const fields = [
+    message.sender,
+    message.text,
+    message.share?.link,
+    message.share?.text,
+    message.storyShare?.title,
+    message.storyShare?.url,
+    message.call?.description,
+    message.actionText,
+  ];
+
+  if (message.isUnsent) {
+    fields.push('unsent');
+  }
+
+  message.files.forEach((file) => {
+    fields.push(file.title, file.uri);
+  });
+
+  const mediaBatches = [
+    message.media.photos,
+    message.media.videos,
+    message.media.gifs,
+    message.media.audio,
+  ];
+  mediaBatches.forEach((batch) => {
+    batch.forEach((item) => {
+      if (item.uri) {
+        fields.push(item.uri);
+      }
+    });
+  });
+
+  message.reactions.forEach((reaction) => {
+    fields.push(reaction.emoji, reaction.actor);
+  });
+
+  return fields.some((field) => typeof field === 'string' && field.toLowerCase().includes(searchTerm));
 }
 
 function generateAvatarLabel(conversation) {

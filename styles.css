@@ -275,9 +275,37 @@ a {
 
 .conversation-actions {
   display: flex;
+  align-items: center;
   gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
+.message-search {
+  flex: 1;
+  max-width: clamp(180px, 28vw, 320px);
+  min-width: 160px;
+}
+
+.message-search input[type='search'] {
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: var(--bg);
+  color: inherit;
+  transition: border-color 0.2s ease;
+}
+
+.message-search input[type='search']:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.message-search input[type='search']:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
 .ghost-button {
   padding: 8px 14px;
   border-radius: 999px;
@@ -312,6 +340,11 @@ a {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  scroll-margin-top: 96px;
+}
+
+.action-wrapper {
+  scroll-margin-top: 96px;
 }
 
 .message-meta {
@@ -321,6 +354,39 @@ a {
   color: var(--text-secondary);
   font-size: 0.78rem;
   margin-bottom: 2px;
+  flex-wrap: wrap;
+}
+
+.message-meta-text {
+  margin-right: auto;
+}
+
+.jump-button {
+  margin-left: auto;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
+}
+
+.jump-button:hover {
+  border-color: var(--accent);
+  color: var(--text-primary);
+  background: rgba(0, 149, 246, 0.1);
+}
+
+.jump-button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.action-controls {
+  justify-content: flex-end;
 }
 
 .message-bubble {
@@ -387,12 +453,21 @@ a {
   color: var(--text-secondary);
   font-size: 0.75rem;
   margin: 18px 0;
+  transition: box-shadow 0.2s ease;
 }
 
 .action-message {
   background: rgba(255, 255, 255, 0.04);
   color: var(--text-secondary);
   font-size: 0.78rem;
+}
+
+.message-group.message-focus .message-bubble {
+  box-shadow: 0 0 0 2px rgba(0, 149, 246, 0.35);
+}
+
+.action-wrapper.message-focus .date-divider {
+  box-shadow: 0 0 0 2px rgba(0, 149, 246, 0.35);
 }
 
 .conversation-footer {
